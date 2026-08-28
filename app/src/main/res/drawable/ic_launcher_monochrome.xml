@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!--
+      Single-color silhouette for Android 13+ Material You themed icons.
+      The system re-tints this shape at render time, so the fill color
+      below is only a placeholder; geometry mirrors ic_launcher_foreground
+      (minus the screen inset detail, which doesn't read at themed-icon
+      scale) and stays inside the central 66x66dp safe zone.
+    -->
+
+    <group
+        android:pivotX="42"
+        android:pivotY="56"
+        android:rotation="22">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M35,35 L49,35 A4,4 0 0 1 53,39 L53,73 A4,4 0 0 1 49,77 L35,77 A4,4 0 0 1 31,73 L31,39 A4,4 0 0 1 35,35 Z" />
+    </group>
+
+    <group
+        android:pivotX="66"
+        android:pivotY="56"
+        android:rotation="-22">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M59,35 L73,35 A4,4 0 0 1 77,39 L77,73 A4,4 0 0 1 73,77 L59,77 A4,4 0 0 1 55,73 L55,39 A4,4 0 0 1 59,35 Z" />
+    </group>
+
+    <group
+        android:scaleX="0.55"
+        android:scaleY="0.55"
+        android:translateX="48.5"
+        android:translateY="31.4">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M7,2v11h3v9l7,-12h-4l4,-8z" />
+    </group>
+</vector>

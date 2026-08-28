@@ -1,0 +1,26 @@
+<resources>
+    <string name="app_name">SpecClash</string>
+    <string name="device_a">Device A</string>
+    <string name="device_b">Device B</string>
+    <string name="select_device">Select a device</string>
+    <string name="search_hint">Search phones…</string>
+    <string name="swap_devices">Swap A ⇆ B</string>
+    <string name="show_differences_only">Show differences only</string>
+    <string name="retry">Retry</string>
+    <string name="error_offline">Couldn\'t load specs. Check your connection.</string>
+    <string name="empty_selection_title">Choose two devices to compare</string>
+    <string name="empty_selection_subtitle">Pick a phone for each slot above to see the full spec showdown.</string>
+    <string name="verdict_title">Verdict</string>
+    <string name="loading_specs">Loading specs…</string>
+    <string name="cd_thumbnail">Device thumbnail</string>
+    <string name="cd_hero">Device hero image</string>
+    <string name="cd_swap">Swap devices</string>
+    <string name="winner">Winner</string>
+    <string name="tied">Tied</string>
+    <string name="category_display">Display</string>
+    <string name="category_platform">Platform &amp; Performance</string>
+    <string name="category_memory">Memory &amp; Storage</string>
+    <string name="category_camera">Cameras</string>
+    <string name="category_battery">Battery &amp; Charging</string>
+    <string name="category_body">Body &amp; Dimensions</string>
+</resources>
