@@ -1,0 +1,44 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Local configuration (SDK path etc. - machine-specific)
+local.properties
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+*.ipr
+*.iws
+.navigation/
+captures/
+
+# Kotlin
+.kotlin/
+
+# Native
+.externalNativeBuild/
+.cxx/
+
+# Build outputs
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+
+# Signing keys - never commit these
+*.jks
+*.keystore
+
+# Logs / crash reports
+*.log
+*.hprof
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Stray empty placeholder file left behind by tooling - not real source
+app/src/main/java/com/example/specclash/ui/home/components/_append1.txt
