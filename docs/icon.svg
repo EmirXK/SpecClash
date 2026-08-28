@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="108" height="108" role="img" aria-label="SpecClash app icon">
+  <!--
+    Static render of the app's real adaptive icon layers (see
+    app/src/main/res/drawable/ic_launcher_background.xml,
+    ic_launcher_foreground.xml) for use in docs, since Android
+    VectorDrawable XML doesn't render as an image outside the app.
+  -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="108" y2="108" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0F172A"/>
+      <stop offset="1" stop-color="#1E293B"/>
+    </linearGradient>
+    <clipPath id="round">
+      <rect x="0" y="0" width="108" height="108" rx="24"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#round)">
+    <rect x="0" y="0" width="108" height="108" fill="url(#bg)"/>
+
+    <!-- Cyan phone (left), tilted toward the clash point. -->
+    <g transform="rotate(22 42 56)">
+      <path fill="#38BDF8" d="M35,35 L49,35 A4,4 0 0 1 53,39 L53,73 A4,4 0 0 1 49,77 L35,77 A4,4 0 0 1 31,73 L31,39 A4,4 0 0 1 35,35 Z"/>
+      <path fill="#0F172A" fill-opacity="0.35" d="M35.5,37.5 L48.5,37.5 A2,2 0 0 1 50.5,39.5 L50.5,70 A2,2 0 0 1 48.5,72 L35.5,72 A2,2 0 0 1 33.5,70 L33.5,39.5 A2,2 0 0 1 35.5,37.5 Z"/>
+      <path stroke="#0F172A" stroke-opacity="0.35" stroke-width="1.4" stroke-linecap="round" d="M38,74.5 L46,74.5"/>
+    </g>
+
+    <!-- Indigo phone (right), mirrored tilt. -->
+    <g transform="rotate(-22 66 56)">
+      <path fill="#818CF8" d="M59,35 L73,35 A4,4 0 0 1 77,39 L77,73 A4,4 0 0 1 73,77 L59,77 A4,4 0 0 1 55,73 L55,39 A4,4 0 0 1 59,35 Z"/>
+      <path fill="#0F172A" fill-opacity="0.35" d="M59.5,37.5 L72.5,37.5 A2,2 0 0 1 74.5,39.5 L74.5,70 A2,2 0 0 1 72.5,72 L59.5,72 A2,2 0 0 1 57.5,70 L57.5,39.5 A2,2 0 0 1 59.5,37.5 Z"/>
+      <path stroke="#0F172A" stroke-opacity="0.35" stroke-width="1.4" stroke-linecap="round" d="M62,74.5 L70,74.5"/>
+    </g>
+
+    <!-- Electric "clash" spark bridging the two phones. -->
+    <g transform="translate(48.5,31.4) scale(0.55,0.55)">
+      <path fill="#FACC15" d="M7,2v11h3v9l7,-12h-4l4,-8z"/>
+    </g>
+  </g>
+</svg>
