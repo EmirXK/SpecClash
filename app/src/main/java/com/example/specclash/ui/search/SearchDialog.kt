@@ -156,11 +156,24 @@ fun SearchDialog(
                     FilterChip(
                         selected = selected,
                         onClick = {
+                            val previousBrand = selectedBrand
                             selectedBrand = brand
-                            // When the field is empty, seed the network search
-                            // with the brand name itself so suggestions for
-                            // that brand show up immediately.
-                            if (brand != BRAND_ALL && query.isBlank()) {
+                            // Seed the network search with the brand name so
+                            // suggestions for that brand show up immediately.
+                            // Only do this when the field is empty or still
+                            // holds the *previous* brand-chip's auto-seeded
+                            // text - a genuinely user-typed query (e.g.
+                            // "Galaxy S25") is left alone and just narrowed
+                            // client-side by selectedBrand below. Without the
+                            // previous-brand check, tapping a second brand
+                            // chip left the query stuck on the first brand's
+                            // name while selectedBrand moved on, so results
+                            // were filtered against a brand they could never
+                            // match (e.g. Apple-seeded results filtered by
+                            // "Xiaomi") and the list always came up empty.
+                            if (brand != BRAND_ALL &&
+                                (query.isBlank() || query.equals(previousBrand, ignoreCase = true))
+                            ) {
                                 onQueryChange(brand)
                             }
                         },
