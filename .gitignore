@@ -42,3 +42,5 @@ Thumbs.db
 
 # Stray empty placeholder file left behind by tooling - not real source
 app/src/main/java/com/example/specclash/ui/home/components/_append1.txt
+
+CLAUDE.md
