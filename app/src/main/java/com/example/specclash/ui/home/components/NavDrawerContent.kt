@@ -50,11 +50,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.toBitmap
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import com.example.specclash.BuildConfig
@@ -238,6 +241,15 @@ fun NavDrawerContent(
 
 @Composable
 private fun DrawerHeader(buildVersion: String) {
+    // R.mipmap.ic_launcher resolves to an <adaptive-icon> XML on API 26+,
+    // which painterResource()/vectorResource() can't decode ("Only
+    // VectorDrawables and rasterized asset types are supported"). Rasterize
+    // it via the platform Drawable APIs instead, which understand adaptive
+    // icons natively.
+    val context = LocalContext.current
+    val appIcon = remember {
+        ContextCompat.getDrawable(context, R.mipmap.ic_launcher)?.toBitmap()?.asImageBitmap()
+    }
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -250,12 +262,14 @@ private fun DrawerHeader(buildVersion: String) {
                 .clip(RoundedCornerShape(12.dp)),
             contentAlignment = Alignment.Center,
         ) {
-            Image(
-                painter = painterResource(id = R.mipmap.ic_launcher),
-                contentDescription = null,
-                modifier = Modifier.matchParentSize(),
-                contentScale = ContentScale.Crop,
-            )
+            if (appIcon != null) {
+                Image(
+                    bitmap = appIcon,
+                    contentDescription = null,
+                    modifier = Modifier.matchParentSize(),
+                    contentScale = ContentScale.Crop,
+                )
+            }
         }
         Spacer(Modifier.width(12.dp))
         Column {
