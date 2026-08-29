@@ -141,12 +141,17 @@ object SpecComparator {
                 val w = formatInt(diff)
                 "+$w W faster"
             }
+            k.contains("price") -> {
+                val s = formatDecimal(diff)
+                // `a`/`b` here are already USD-normalized (see parseNumeric's
+                // "price" branch), so the delta is a real dollar amount.
+                "\$$s lower"
+            }
             else -> {
                 val s = formatDecimal(diff)
                 // Direction-aware, not A/B-aware: whichever side won did so
                 // by satisfying `direction(specKey)`, so the label just
-                // needs to match that direction, e.g. a "lower is better"
-                // metric like price reads "$46.99 lower" on its winner.
+                // needs to match that direction.
                 when (direction(specKey)) {
                     Direction.LOWER -> "$s lower"
                     Direction.HIGHER, Direction.UNKNOWN -> "+$s higher"
@@ -438,6 +443,15 @@ object SpecComparator {
 
     private fun parseNumeric(raw: String, specKey: String): Double? {
         val k = specKey.lowercase()
+
+        // Price — delegate to the currency-aware extractor so a price row
+        // is always normalized to USD before any subtraction/ratio math,
+        // instead of grabbing whichever raw digit run appears first
+        // regardless of currency (GENERIC_NUMBER below has no currency or
+        // thousands-separator awareness).
+        if (k.contains("price")) {
+            return extractPrice(raw)?.amountUsd
+        }
 
         // Battery capacity — e.g. "4000 mAh", "Li-Ion 4000 mAh"
         if (k.contains("battery") || k.contains("mAh")) {
@@ -734,8 +748,11 @@ object SpecComparator {
         listOf("dimensity 9400") to 95..95,
         listOf("dimensity 9300") to 92..92,
         // Tier 2: Upper Midrange (75-89)
-        listOf("exynos 2400") to 88..88,
+        // NOTE: "exynos 2400e" must be listed before the shorter "exynos
+        // 2400" — lookup matches on first substring hit, and "exynos 2400"
+        // is itself a substring of "exynos 2400e".
         listOf("exynos 2400e") to 85..85,
+        listOf("exynos 2400") to 88..88,
         listOf("8s gen 3") to 82..82,
         listOf("a16") to 80..80,
         listOf("a15") to 76..76,
@@ -1645,8 +1662,13 @@ object SpecComparator {
         winning: Boolean,
         forA: Boolean,
     ): String {
-        val ratio = my / max(their, 0.01)
+        // Always express the ratio as >= 1.0 in the direction of travel:
+        // the winner's ratio is my/their, the loser's is their/my (its
+        // deficit relative to the winner) - never a raw my/their ratio
+        // labeled "faster" regardless of who's actually ahead.
+        val ratio = if (winning) my / max(their, 0.01) else their / max(my, 0.01)
         val multStr = String.format("%.1fx", ratio)
+        val verb = if (winning) "faster" else "slower"
         val label = if (forA) cat.summaryA else cat.summaryB
         val sign = if (winning) "+" else "-"
         // Surface the lab benchmark number directly in the bullet when the
@@ -1660,7 +1682,7 @@ object SpecComparator {
             antutuMatch != null -> "\u26A1 AnTuTu v10: ${antutuMatch.groupValues[1]}"
             else -> label
         }
-        return "$sign $multStr faster silicon ($metricBullets)"
+        return "$sign $multStr $verb silicon ($metricBullets)"
     }
 
     private fun cameraAdvantageLine(summary: String): String {

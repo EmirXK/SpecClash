@@ -105,11 +105,14 @@ class HomeViewModel(
     }
 
     /** Current cache size (row count of cached_phones). */
-    val cachedPhoneCount: StateFlow<Int> = MutableStateFlow(0).also { sink ->
+    private val _cachedPhoneCount = MutableStateFlow(0)
+    val cachedPhoneCount: StateFlow<Int> = _cachedPhoneCount.asStateFlow()
+
+    init {
         viewModelScope.launch {
-            sink.value = repository.cachedPhoneCount()
+            _cachedPhoneCount.value = repository.cachedPhoneCount()
         }
-    }.asStateFlow()
+    }
 
     /** Whether the active (specA, specB) matchup is currently pinned. */
     val isCurrentMatchupPinned: StateFlow<Boolean> = _state
@@ -314,8 +317,7 @@ class HomeViewModel(
 
     fun refreshCacheCount() {
         viewModelScope.launch {
-            val newCount = repository.cachedPhoneCount()
-            (cachedPhoneCount as? MutableStateFlow)?.value = newCount
+            _cachedPhoneCount.value = repository.cachedPhoneCount()
         }
     }
 
