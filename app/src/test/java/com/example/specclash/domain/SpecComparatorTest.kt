@@ -116,6 +116,52 @@ class SpecComparatorTest {
     }
 
     @Test
+    fun `charging wattage - regression - never compares wired against wireless`() {
+        // Regression test for a real-world report: Samsung Galaxy S26 Ultra
+        // discloses 60W wired charging; Apple never discloses the iPhone's
+        // wired wattage (only "Wired, PD3.2, ..." with no number) but does
+        // disclose 25W wireless. The old GENERIC/CHARGING_W parser grabbed
+        // whichever "<num>W" happened to appear first regardless of mode,
+        // so it compared S26U's 60W *wired* against the iPhone's 25W
+        // *wireless* and declared "+35 W faster" - a meaningless
+        // cross-standard comparison. With no wired figure disclosed on the
+        // iPhone's side, the only apples-to-apples comparison left is
+        // wireless-vs-wireless, and both happen to disclose 25W wireless -
+        // a genuine tie, not a fabricated "wired winner".
+        val c = SpecComparator.compare(
+            "60W wired, PD3.0, 75% in 30 min, 25W wireless (Qi2.2), 4.5W reverse wireless",
+            "Wired, PD3.2, AVS, 50% in 20 min, 25W wireless MagSafe/Qi2, 50% in 30 min (15W - China), 4.5W reverse wired",
+            "Charging",
+        )
+        assertEquals(Winner.TIE, c.winner)
+        assertEquals("Same", c.deltaText)
+    }
+
+    @Test
+    fun `charging wattage - regression - no comparable mode on either side ties with no badge`() {
+        // Neither side discloses a wired number, and only one side
+        // discloses a wireless number - there is nothing comparable at all.
+        val c = SpecComparator.compare(
+            "Wired, PD3.2, 50% in 20 min",
+            "Wired, 50% in 25 min",
+            "Charging",
+        )
+        assertEquals(Winner.TIE, c.winner)
+        assertEquals("—", c.deltaText)
+    }
+
+    @Test
+    fun `charging wattage - falls back to wireless-vs-wireless when neither side discloses wired wattage`() {
+        val c = SpecComparator.compare(
+            "Wired, 50% in 20 min, 20W wireless, 4.5W reverse wired",
+            "Wired, 50% in 30 min, 15W wireless, 4.5W reverse wired",
+            "Charging",
+        )
+        assertEquals(Winner.A, c.winner)
+        assertEquals("+5 W faster", c.deltaText)
+    }
+
+    @Test
     fun `price - lower price wins when A is cheaper`() {
         // €164.00 and €210.99 are normalized to USD (x1.08) before diffing,
         // so the delta is a dollar amount, not a raw EUR subtraction:
@@ -323,11 +369,11 @@ class SpecComparatorTest {
     }
 
     @Test
-    fun `performance advantage bullets - winner reads faster, loser reads slower with matching ratios`() {
+    fun `performance advantage bullets - winner reads faster, loser reads slower with matching percentages`() {
         // Regression test: performanceAdvantage() used to compute my/their
         // independently for both sides and label both "faster", producing
         // nonsense pairs like "+ 1.5x faster silicon" / "- 0.7x faster
-        // silicon". Both sides must now report the same ratio, worded
+        // silicon". Both sides must now report the same percentage, worded
         // "faster" for the winner and "slower" for the loser.
         val common = mapOf(
             "Type" to "AMOLED, 120Hz, 1200 nits (peak)",
@@ -366,13 +412,13 @@ class SpecComparatorTest {
         assertTrue("Loser bullet should read 'slower', not 'faster': $loserBullet", loserBullet.contains("slower"))
         assertFalse("Loser bullet must never say 'faster': $loserBullet", loserBullet.contains("faster"))
 
-        val ratio = Regex("""([\d.]+)x""")
-        val winnerRatio = ratio.find(winnerBullet)!!.groupValues[1]
-        val loserRatio = ratio.find(loserBullet)!!.groupValues[1]
+        val pct = Regex("""(\d+)%""")
+        val winnerPct = pct.find(winnerBullet)!!.groupValues[1]
+        val loserPct = pct.find(loserBullet)!!.groupValues[1]
         assertEquals(
-            "Both sides should quote the same multiplier, just with an opposite verb",
-            winnerRatio,
-            loserRatio,
+            "Both sides should quote the same percentage, just with an opposite verb",
+            winnerPct,
+            loserPct,
         )
     }
 
@@ -802,9 +848,12 @@ class SpecComparatorTest {
             ),
         )
         val verdict = SpecComparator.buildVerdict(flagship, mid)
-        // Performance: 9846 / 10000 = 98.46 -> 98; 5530 / 10000 = 55.3.
-        assertEquals(98.46, verdict.performance.scoreA, 0.05)
-        assertEquals(55.30, verdict.performance.scoreB, 0.05)
+        // Performance: 9846 / 20000 = 49.23; 5530 / 20000 = 27.65. (The
+        // reference ceiling is well above today's real-world scores so two
+        // high scorers never saturate to an indistinguishable tie at 100 -
+        // see geekbench6ToScore.)
+        assertEquals(49.23, verdict.performance.scoreA, 0.05)
+        assertEquals(27.65, verdict.performance.scoreB, 0.05)
         assertEquals(Winner.A, verdict.performance.winner)
         // Summary must embed the GB6 numbers.
         assertTrue(
@@ -815,6 +864,39 @@ class SpecComparatorTest {
             "Performance summary A should include raw score 9,846, got: ${verdict.performance.summaryA}",
             verdict.performance.summaryA.contains("9,846"),
         )
+    }
+
+    @Test
+    fun `buildVerdict - regression - two high-end GB6 scores no longer saturate to a tie`() {
+        // Regression test for a real-world report: Samsung Galaxy S26 Ultra
+        // (GB6 11,566) vs Apple iPhone 17 Pro Max (GB6 10,118) both cleared
+        // the old 10,000 reference ceiling, so geekbench6ToScore() clamped
+        // both to 100 and the performance category came back a TIE with no
+        // "faster silicon" advantage bullet at all, despite an real ~14%
+        // gap between the two devices.
+        val s26Ultra = phoneSpec(
+            slug = "s26-ultra", name = "Samsung Galaxy S26 Ultra",
+            platform = mapOf("Chipset" to "Snapdragon 8 Elite Gen 5 (2 nm)"),
+            ourTests = mapOf("Performance" to "GeekBench: 11566 (v6)"),
+        )
+        val iphone17ProMax = phoneSpec(
+            slug = "iphone-17-pro-max", name = "Apple iPhone 17 Pro Max",
+            platform = mapOf("Chipset" to "Apple A19 Pro (3 nm)"),
+            ourTests = mapOf("Performance" to "GeekBench: 10118 (v6)"),
+        )
+        val verdict = SpecComparator.buildVerdict(s26Ultra, iphone17ProMax)
+
+        assertEquals(Winner.A, verdict.performance.winner)
+        assertTrue(
+            "Both scores must stay below the 100 ceiling so they remain distinguishable, " +
+                "got A=${verdict.performance.scoreA} B=${verdict.performance.scoreB}",
+            verdict.performance.scoreA < 100.0 && verdict.performance.scoreB < 100.0,
+        )
+
+        val winnerBullet = verdict.advantagesA.first { it.contains("silicon") }
+        // 11566 / 10118 ~= 1.143 -> ~14% faster.
+        assertTrue("Expected a ~14% faster bullet, got: $winnerBullet", winnerBullet.contains("14%"))
+        assertTrue("Expected 'faster' on the winner's bullet: $winnerBullet", winnerBullet.contains("faster"))
     }
 
     @Test
@@ -830,9 +912,9 @@ class SpecComparatorTest {
             ourTests = mapOf("Performance" to "AnTuTu: 900000 (v10)"),
         )
         val verdict = SpecComparator.buildVerdict(a, b)
-        // Performance uses AnTuTu 10: A = 1500000/2000000 = 75; B = 900000/2000000 = 45.
-        assertEquals(75.0, verdict.performance.scoreA, 0.01)
-        assertEquals(45.0, verdict.performance.scoreB, 0.01)
+        // Performance uses AnTuTu 10: A = 1500000/4000000 = 37.5; B = 900000/4000000 = 22.5.
+        assertEquals(37.5, verdict.performance.scoreA, 0.01)
+        assertEquals(22.5, verdict.performance.scoreB, 0.01)
         assertTrue(verdict.performance.summaryA.contains("AnTuTu v10"))
     }
 

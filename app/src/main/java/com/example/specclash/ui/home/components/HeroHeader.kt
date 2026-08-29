@@ -210,6 +210,7 @@ internal fun PriceBadge(
     accent: Color,
     isCustom: Boolean = false,
     onClick: (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
 ) {
     val isPriced = price != null && price.amountUsd > 0.0
     val chipColor = if (isPriced) accent else MaterialTheme.colorScheme.onSurfaceVariant
@@ -223,7 +224,7 @@ internal fun PriceBadge(
         else -> "Price N/A"
     }
     Row(
-        modifier = Modifier
+        modifier = modifier
             .clip(RoundedCornerShape(8.dp))
             .background(chipBg)
             .then(
@@ -241,7 +242,8 @@ internal fun PriceBadge(
             style = MaterialTheme.typography.labelSmall,
             color = chipColor,
             fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
+            modifier = Modifier.weight(1f, fill = false),
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
         if (onClick != null) {

@@ -113,9 +113,9 @@ class SpecMatrixBuilderTest {
 
     @Test
     fun `buildRows unifies mismatched lens-count keys into a single Rear Sensors row`() {
-        val quadBlob = "200 MP wide, f/1.7\n\n10 MP telephoto, f/2.4\n\n" +
-            "50 MP periscope, f/3.4\n\n50 MP ultrawide, f/1.9"
-        val tripleBlob = "48 MP wide, f/1.8\n\n12 MP telephoto, f/2.8\n\n12 MP ultrawide, f/2.2"
+        val quadBlob = "200 MP, f/1.7, 23mm (wide)\n\n10 MP, f/2.4, 67mm (telephoto)\n\n" +
+            "50 MP, f/3.4, 111mm (periscope telephoto)\n\n50 MP, f/1.9, 120° (ultrawide)"
+        val tripleBlob = "48 MP, f/1.8, 24mm (wide)\n\n12 MP, f/2.8, 52mm (telephoto)\n\n12 MP, f/2.2, 13mm (ultrawide)"
         // A has a Quad rear camera, B has a Triple - different upstream keys
         // that must still land on the same "Rear Sensors" row side-by-side,
         // never as separate rows with a "—" on the other side.
@@ -126,16 +126,36 @@ class SpecMatrixBuilderTest {
         val rows = SpecMatrixBuilder.buildRows(a, b, rearCategory, differencesOnly = false)
         val sensorsRow = rows.first { it.key == "Rear Sensors" }
 
+        // Each lens becomes its own labelled bullet, blank-line separated
+        // (not clumped together) so multi-lens rows stay readable.
         assertEquals(
-            "• 200 MP wide, f/1.7\n• 10 MP telephoto, f/2.4\n• 50 MP periscope, f/3.4\n• 50 MP ultrawide, f/1.9",
+            "• Wide: 200 MP, f/1.7, 23mm (wide)\n\n" +
+                "• Telephoto: 10 MP, f/2.4, 67mm (telephoto)\n\n" +
+                "• Periscope Telephoto: 50 MP, f/3.4, 111mm (periscope telephoto)\n\n" +
+                "• Ultrawide: 50 MP, f/1.9, 120° (ultrawide)",
             sensorsRow.valueA,
         )
         assertEquals(
-            "• 48 MP wide, f/1.8\n• 12 MP telephoto, f/2.8\n• 12 MP ultrawide, f/2.2",
+            "• Wide: 48 MP, f/1.8, 24mm (wide)\n\n" +
+                "• Telephoto: 12 MP, f/2.8, 52mm (telephoto)\n\n" +
+                "• Ultrawide: 12 MP, f/2.2, 13mm (ultrawide)",
             sensorsRow.valueB,
         )
         // No more separate "Single"/"Dual"/"Triple"/"Quad" rows.
         assertEquals(0, rows.count { it.key in setOf("Single", "Dual", "Triple", "Quad") })
+    }
+
+    @Test
+    fun `buildRows leaves a plain single-lens value untouched with no label prefix`() {
+        val a = mainCameraSpec("Phone A", quadKey = "Single", quadValue = "50 MP, f/1.8, OIS")
+        val b = mainCameraSpec("Phone B", quadKey = "Single", quadValue = "48 MP, f/1.9, OIS")
+
+        val rearCategory = SpecMatrixBuilder.categories.first { it.title == "Rear Cameras" }
+        val rows = SpecMatrixBuilder.buildRows(a, b, rearCategory, differencesOnly = false)
+        val sensorsRow = rows.first { it.key == "Rear Sensors" }
+
+        assertEquals("50 MP, f/1.8, OIS", sensorsRow.valueA)
+        assertEquals("48 MP, f/1.9, OIS", sensorsRow.valueB)
     }
 
     @Test
