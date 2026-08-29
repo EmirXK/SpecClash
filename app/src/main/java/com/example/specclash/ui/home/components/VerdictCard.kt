@@ -321,9 +321,25 @@ private fun ValueForMoneySection(
             )
         }
         Spacer(Modifier.height(6.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PriceBadge(price = value.priceA, accent = accentA, isCustom = isPriceACustom, onClick = onEditPriceA)
-            PriceBadge(price = value.priceB, accent = accentB, isCustom = isPriceBCustom, onClick = onEditPriceB)
+        // Stacked, not side-by-side: a long multi-currency price (e.g.
+        // "$969.99 / €929 / £788.49 / ₹118000") would otherwise claim most
+        // of a shared Row and crowd out - or fully hide - the other
+        // device's badge and its edit affordance.
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            PriceBadge(
+                price = value.priceA,
+                accent = accentA,
+                isCustom = isPriceACustom,
+                onClick = onEditPriceA,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            PriceBadge(
+                price = value.priceB,
+                accent = accentB,
+                isCustom = isPriceBCustom,
+                onClick = onEditPriceB,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
         Spacer(Modifier.height(6.dp))
         Text(

@@ -45,6 +45,14 @@ object SpecComparator {
         rawB: String?,
         specKey: String,
     ): Comparison {
+        val k0 = specKey.lowercase()
+        if (k0.contains("charg") || k0.contains("watt")) {
+            if (!isAllowedDeltaKey(specKey)) {
+                return Comparison(null, null, Winner.TIE, "")
+            }
+            return compareCharging(rawA, rawB)
+        }
+
         val va = rawA?.let { parseNumeric(it, specKey) }
         val vb = rawB?.let { parseNumeric(it, specKey) }
 
@@ -88,6 +96,71 @@ object SpecComparator {
         if (lowerIsBetterKeys.any { k.contains(it) }) return Direction.LOWER
         if (higherIsBetterKeys.any { k.contains(it) }) return Direction.HIGHER
         return Direction.UNKNOWN
+    }
+
+    /** Wired vs. wireless charging wattage parsed out of one raw "Charging" string. */
+    private data class ChargingSpeeds(val wiredW: Double?, val wirelessW: Double?)
+
+    /**
+     * Compare two "Charging" spec strings without ever pitting a wired figure
+     * against a wireless one - a phone that doesn't disclose its wired wattage
+     * (e.g. Apple) must never be judged against another phone's wired number
+     * using whichever wattage happened to be parsed first.
+     */
+    private fun compareCharging(rawA: String?, rawB: String?): Comparison {
+        val a = extractChargingSpeeds(rawA)
+        val b = extractChargingSpeeds(rawB)
+        val (va, vb) = when {
+            a.wiredW != null && b.wiredW != null -> a.wiredW to b.wiredW
+            a.wirelessW != null && b.wirelessW != null -> a.wirelessW to b.wirelessW
+            // No shared charging mode to compare (e.g. one side only
+            // discloses wired, the other only wireless) - render a clean
+            // side-by-side with no subtraction badge, same as any other
+            // unparseable/non-comparable pair.
+            else -> null to null
+        }
+        val displayA = a.wiredW ?: a.wirelessW
+        val displayB = b.wiredW ?: b.wirelessW
+        if (va == null || vb == null) {
+            return Comparison(displayA, displayB, Winner.TIE, "—")
+        }
+        if (abs(va - vb) < 0.0001) {
+            return Comparison(va, vb, Winner.TIE, "Same")
+        }
+        val winner = if (va > vb) Winner.A else Winner.B
+        val w = formatInt(abs(va - vb))
+        return Comparison(va, vb, winner, "+$w W faster")
+    }
+
+    /**
+     * Splits a raw "Charging" string into wired/wireless wattages. GSMArena
+     * strings look like "60W wired, PD3.0, 75% in 30 min, 25W wireless
+     * (Qi2.2), 4.5W reverse wireless" or "Wired, PD3.2, AVS, 50% in 20 min,
+     * 25W wireless MagSafe/Qi2, 50% in 30 min (15W - China), 4.5W reverse
+     * wired". Reverse-charging clauses (the phone powering another device)
+     * are excluded - they're not the phone's own charging spec.
+     */
+    private fun extractChargingSpeeds(raw: String?): ChargingSpeeds {
+        if (raw.isNullOrBlank()) return ChargingSpeeds(null, null)
+        var wiredW: Double? = null
+        var wirelessW: Double? = null
+        // A trailing regional-variant clause like "(15W - China)" continues
+        // describing whichever mode the previous clause introduced, without
+        // repeating the word "wireless" - so the current mode carries
+        // forward across clauses instead of resetting at every comma.
+        var mode = "wired" // GSMArena convention: wired charging is listed first
+        for (clause in raw.split(",")) {
+            val lower = clause.lowercase()
+            if (lower.contains("reverse")) continue
+            if (lower.contains("wireless")) mode = "wireless" else if (lower.contains("wired")) mode = "wired"
+            val w = CHARGING_W.find(clause)?.groupValues?.get(1)?.toDoubleOrNull() ?: continue
+            if (mode == "wireless") {
+                if (wirelessW == null) wirelessW = w
+            } else if (wiredW == null) {
+                wiredW = w
+            }
+        }
+        return ChargingSpeeds(wiredW, wirelessW)
     }
 
     // --- Formatting --------------------------------------------------------
@@ -136,10 +209,6 @@ object SpecComparator {
                 // delta text on the winner's row is always the positive form
                 // ("thinner"), never the negative form ("thicker").
                 "$s mm thinner"
-            }
-            k.contains("charg") || k.contains("watt") -> {
-                val w = formatInt(diff)
-                "+$w W faster"
             }
             k.contains("price") -> {
                 val s = formatDecimal(diff)
@@ -474,10 +543,10 @@ object SpecComparator {
             THICKNESS_MM.findAll(raw).lastOrNull()?.groupValues?.get(1)?.toDoubleOrNull()?.let { return it }
         }
 
-        // Charging wattage — "25W", "25 W", "45W wired"
-        if (k.contains("charg") || k.contains("watt")) {
-            CHARGING_W.find(raw)?.groupValues?.get(1)?.toDoubleOrNull()?.let { return it }
-        }
+        // Note: "charging"/"watt" keys never reach here — compare() routes
+        // them to compareCharging() before calling parseNumeric, since a
+        // charging spec needs wired-vs-wired/wireless-vs-wireless matching
+        // rather than a single generic numeric value.
 
         // Process node — "4 nm", "3 nm". Even if the specKey doesn't say "nm"
         // or "chipset", we can detect the trailing "nm" in the raw value.
@@ -1667,7 +1736,7 @@ object SpecComparator {
         // deficit relative to the winner) - never a raw my/their ratio
         // labeled "faster" regardless of who's actually ahead.
         val ratio = if (winning) my / max(their, 0.01) else their / max(my, 0.01)
-        val multStr = String.format("%.1fx", ratio)
+        val pctStr = String.format("%.0f", (ratio - 1.0) * 100.0)
         val verb = if (winning) "faster" else "slower"
         val label = if (forA) cat.summaryA else cat.summaryB
         val sign = if (winning) "+" else "-"
@@ -1682,7 +1751,7 @@ object SpecComparator {
             antutuMatch != null -> "\u26A1 AnTuTu v10: ${antutuMatch.groupValues[1]}"
             else -> label
         }
-        return "$sign $multStr $verb silicon ($metricBullets)"
+        return "$sign $pctStr% $verb silicon ($metricBullets)"
     }
 
     private fun cameraAdvantageLine(summary: String): String {
@@ -2194,17 +2263,23 @@ object SpecComparator {
 
     /**
      * Convert a Geekbench 6 multi-core score to a 0-100 performance rating.
-     * A score of 10,000 -> 100; score of 1,000 -> 10; the curve is linear
-     * and saturates at 100 (capped).
+     * A score of 20,000 -> 100; the curve is linear and saturates at 100.
+     * The reference ceiling needs periodic bumping as flagship scores climb
+     * (2026 flagships already clear 11,000+) - if two devices both saturate
+     * at 100 they become indistinguishable (tie, no advantage bullet) even
+     * when their raw scores clearly differ, so keep this comfortably above
+     * the current top real-world score.
      */
     private fun geekbench6ToScore(gb: Double): Double =
-        min(100.0, (gb / 10000.0) * 100.0)
+        min(100.0, (gb / 20000.0) * 100.0)
 
     /**
      * Convert an AnTuTu v10 score to a 0-100 performance rating. A score of
-     * 2,000,000 -> 100; the curve is linear and saturates at 100.
+     * 4,000,000 -> 100; the curve is linear and saturates at 100. See
+     * [geekbench6ToScore] for why the ceiling needs headroom above current
+     * real-world scores (2026 flagships already clear 2,600,000+).
      */
     private fun antutu10ToScore(antutu: Double): Double =
-        min(100.0, (antutu / 2_000_000.0) * 100.0)
+        min(100.0, (antutu / 4_000_000.0) * 100.0)
 }
 

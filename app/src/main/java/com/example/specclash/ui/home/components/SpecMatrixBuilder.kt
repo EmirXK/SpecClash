@@ -235,16 +235,34 @@ object SpecMatrixBuilder {
     /**
      * Multi-lens camera values arrive as a double-newline delimited blob,
      * e.g. `"200 MP wide...\n\n10 MP telephoto...\n\n50 MP periscope..."`.
-     * Render each lens as its own bulleted line instead of letting them run
-     * together (or get clipped) as a single block of text. Values with no
-     * double-newline are left untouched.
+     * Render each lens as its own labelled, blank-line-separated bullet
+     * instead of letting them run together as one clumped block of text.
+     * Values with no double-newline are left untouched.
      */
     private fun formatBulletedValue(raw: String?): String? {
         if (raw.isNullOrEmpty() || !raw.contains("\n\n")) return raw
         return raw.split("\n\n")
             .map { it.trim() }
             .filter { it.isNotEmpty() }
-            .joinToString("\n") { "• $it" }
+            .joinToString("\n\n") { entry ->
+                val label = lensTypeLabel(entry)
+                if (label != null) "• $label: $entry" else "• $entry"
+            }
+    }
+
+    private val LENS_TYPE_PAREN = Regex("""\(([^)]+)\)""")
+
+    /**
+     * Pulls a lens-type descriptor out of a GSMArena camera-module string,
+     * e.g. `"23mm (wide)"` -> "Wide", `"111mm (periscope telephoto)"` ->
+     * "Periscope Telephoto", so multi-lens rows can be labelled instead of
+     * left as anonymous bullets. Returns `null` when the entry carries no
+     * such descriptor (e.g. a plain single-camera spec).
+     */
+    private fun lensTypeLabel(entry: String): String? {
+        val raw = LENS_TYPE_PAREN.find(entry)?.groupValues?.get(1)?.trim()
+        if (raw.isNullOrEmpty()) return null
+        return raw.split(" ").joinToString(" ") { it.replaceFirstChar(Char::uppercaseChar) }
     }
 
     /** Formats one [LAB_SYNTHETIC_KEYS] row's display value from parsed lab benchmarks. */
