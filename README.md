@@ -25,49 +25,6 @@ answer, not another spec-sheet wall of text.
 
 ---
 
-## 📸 Screenshot Gallery
-
-<table>
-<tr>
-<td align="center" width="50%">
-<img src="screenshot_gallery/Screenshot_20260829_012554_SpecClash.jpg" width="260" alt="Empty comparison state prompting the user to pick two devices" /><br/>
-<b>Pick Two Devices</b><br/>
-<sub>Clean empty state — tap either slot to search and load a phone's full spec sheet.</sub>
-</td>
-<td align="center" width="50%">
-<img src="screenshot_gallery/Screenshot_20260829_012618_SpecClash.jpg" width="260" alt="Side-by-side spec matrix with price badges and the Show differences only toggle" /><br/>
-<b>Side-by-Side Spec Matrix &amp; Differences Filter</b><br/>
-<sub>Galaxy S25 Ultra vs. iPhone 17 Pro Max, with live price badges and a per-category differences filter.</sub>
-</td>
-</tr>
-<tr>
-<td align="center" width="50%">
-<img src="screenshot_gallery/Screenshot_20260829_012630_SpecClash.jpg" width="260" alt="Multi-lens rear camera breakdown rendered as bulleted per-sensor lines" /><br/>
-<b>Multi-Lens Camera Breakdown</b><br/>
-<sub>Every rear sensor — wide, telephoto, periscope, ultrawide — bulleted and aligned lens-by-lens, no truncation.</sub>
-</td>
-<td align="center" width="50%">
-<img src="screenshot_gallery/Screenshot_20260829_012713_SpecClash.jpg" width="260" alt="Hardware verdict card with composite scores and value-for-money breakdown" /><br/>
-<b>Dynamic Hardware Verdict &amp; Value-for-Money</b><br/>
-<sub>Composite 0–100 hardware score, per-category advantages, and a spec-per-dollar value comparison.</sub>
-</td>
-</tr>
-<tr>
-<td align="center" colspan="2">
-<img src="screenshot_gallery/Screenshot_20260829_012731_SpecClash.jpg" width="260" alt="Navigation drawer showing scoring engine presets and cache controls" /><br/>
-<b>Scoring Engine Presets &amp; Data Controls</b><br/>
-<sub>Balanced, Gamer/Performance, Camera/Creator, and Battery/Endurance weighting profiles, plus cache management.</sub>
-</td>
-</tr>
-</table>
-
-> A few features don't have a dedicated screenshot above but are fully implemented and covered in
-> [Core Features](#-core-features): the **Lab Benchmarks** panel (Geekbench 6, AnTuTu v10, 3DMark),
-> **EU Label durability metrics** (battery longevity, drop resistance, repairability, energy class),
-> the **manual price-override dialog**, and **shareable PNG verdict export**.
-
----
-
 ## ✨ Core Features
 
 - **📊 Side-by-Side Dynamic Spec Matrix** — Every category (Display, Platform, Camera, Battery, Body, and more) renders as a live two-column comparison with automated delta badges computed per metric — `+34 W faster`, `30 g lighter`, `$47 lower`, `+0.4" larger` — always phrased from the winning device's perspective, whichever side it lands on.
