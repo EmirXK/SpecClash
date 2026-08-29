@@ -117,9 +117,12 @@ class SpecComparatorTest {
 
     @Test
     fun `price - lower price wins when A is cheaper`() {
+        // €164.00 and €210.99 are normalized to USD (x1.08) before diffing,
+        // so the delta is a dollar amount, not a raw EUR subtraction:
+        // 177.12 vs 227.8692 -> $50.75.
         val c = SpecComparator.compare("€ 164.00", "€ 210.99", "Price")
         assertEquals(Winner.A, c.winner)
-        assertEquals("46.99 lower", c.deltaText)
+        assertEquals("$50.75 lower", c.deltaText)
         assertFalse(
             "Delta must never read 'higher' on the winner's row, got '${c.deltaText}'",
             c.deltaText.contains("higher"),
@@ -136,7 +139,27 @@ class SpecComparatorTest {
         // nonsensically reading "46.99 lower" despite A "winning".
         val c = SpecComparator.compare("€ 210.99", "€ 164.00", "Price")
         assertEquals(Winner.B, c.winner)
-        assertEquals("46.99 lower", c.deltaText)
+        assertEquals("$50.75 lower", c.deltaText)
+    }
+
+    @Test
+    fun `price - multi-currency regression - a currency-tagged total is never truncated or compared raw across currencies`() {
+        // Regression test for a real-world report: device A lists three
+        // currencies ("£249 / €219 / ₹46,990"), device B lists only INR
+        // ("₹26,690"). The old GENERIC_NUMBER fallback ignored currency
+        // symbols entirely and grabbed whichever digit run appeared first,
+        // so it compared A's raw "249" (from £249) against B's raw "26"
+        // (truncated at the first comma in "26,690") - a nonsense
+        // cross-currency, cross-magnitude "223.99 lower" result.
+        //
+        // Correct behavior: both sides are normalized to USD (no literal $
+        // figure is present in either string, so extractPrice falls back to
+        // its EUR/GBP/INR conversion table, preferring EUR when present):
+        //   A -> €219 * 1.08 = $236.52
+        //   B -> ₹26,690 * 0.012 = $320.28
+        val c = SpecComparator.compare("£249 / €219 / ₹46,990", "₹26,690", "Price")
+        assertEquals(Winner.A, c.winner)
+        assertEquals("$83.76 lower", c.deltaText)
     }
 
     @Test
@@ -253,6 +276,104 @@ class SpecComparatorTest {
         // Just ensure both are scored.
         assertTrue(verdict.build.scoreA > 0.0)
         assertTrue(verdict.build.scoreB > 0.0)
+    }
+
+    @Test
+    fun `Exynos 2400e is scored below the plain Exynos 2400, not shadowed by the substring match`() {
+        // Regression test: CHIPSET_TIER lookup matches on the first
+        // substring hit, and "exynos 2400" is itself a substring of
+        // "exynos 2400e". With "exynos 2400" listed first, any "Exynos
+        // 2400e" chipset was silently scored as the faster plain 2400 (88
+        // instead of its own, lower, tier of 85).
+        val common = mapOf(
+            "Type" to "AMOLED, 120Hz, 1200 nits (peak)",
+            "Size" to "6.4 inches",
+            "Resolution" to "1080 x 2340 pixels",
+        )
+        val commonBattery = mapOf("Type" to "Li-Ion 4500 mAh", "Charging" to "25W wired")
+        val commonBody = mapOf("Weight" to "190 g")
+        val commonCamera = mapOf("Triple" to "50 MP, f/1.8, OIS")
+
+        val plain2400 = phoneSpec(
+            slug = "plain-2400",
+            name = "Plain 2400 Phone",
+            display = common,
+            platform = mapOf("Chipset" to "Exynos 2400 (4 nm)"),
+            battery = commonBattery,
+            body = commonBody,
+            camera = commonCamera,
+        )
+        val the2400e = phoneSpec(
+            slug = "2400e",
+            name = "2400e Phone",
+            display = common,
+            platform = mapOf("Chipset" to "Exynos 2400e (4 nm)"),
+            battery = commonBattery,
+            body = commonBody,
+            camera = commonCamera,
+        )
+
+        val verdict = SpecComparator.buildVerdict(plain2400, the2400e)
+        assertTrue(
+            "Plain Exynos 2400 (88) must score strictly higher than Exynos 2400e (85), " +
+                "got A=${verdict.performance.scoreA} B=${verdict.performance.scoreB}",
+            verdict.performance.scoreA > verdict.performance.scoreB,
+        )
+        assertEquals(Winner.A, verdict.performance.winner)
+    }
+
+    @Test
+    fun `performance advantage bullets - winner reads faster, loser reads slower with matching ratios`() {
+        // Regression test: performanceAdvantage() used to compute my/their
+        // independently for both sides and label both "faster", producing
+        // nonsense pairs like "+ 1.5x faster silicon" / "- 0.7x faster
+        // silicon". Both sides must now report the same ratio, worded
+        // "faster" for the winner and "slower" for the loser.
+        val common = mapOf(
+            "Type" to "AMOLED, 120Hz, 1200 nits (peak)",
+            "Size" to "6.4 inches",
+            "Resolution" to "1080 x 2340 pixels",
+        )
+        val commonBattery = mapOf("Type" to "Li-Ion 4500 mAh", "Charging" to "25W wired")
+        val commonBody = mapOf("Weight" to "190 g")
+        val commonCamera = mapOf("Triple" to "50 MP, f/1.8, OIS")
+
+        val flagship = phoneSpec(
+            slug = "flagship",
+            name = "Flagship Phone",
+            display = common,
+            platform = mapOf("Chipset" to "Snapdragon 8 Elite (3 nm)"),
+            battery = commonBattery,
+            body = commonBody,
+            camera = commonCamera,
+        )
+        val midrange = phoneSpec(
+            slug = "midrange",
+            name = "Midrange Phone",
+            display = common,
+            platform = mapOf("Chipset" to "Snapdragon 7s Gen 2 (4 nm)"),
+            battery = commonBattery,
+            body = commonBody,
+            camera = commonCamera,
+        )
+
+        val verdict = SpecComparator.buildVerdict(flagship, midrange)
+        assertEquals(Winner.A, verdict.performance.winner)
+
+        val winnerBullet = verdict.advantagesA.first { it.contains("silicon") }
+        val loserBullet = verdict.advantagesB.first { it.contains("silicon") }
+        assertTrue("Winner bullet should read 'faster': $winnerBullet", winnerBullet.contains("faster"))
+        assertTrue("Loser bullet should read 'slower', not 'faster': $loserBullet", loserBullet.contains("slower"))
+        assertFalse("Loser bullet must never say 'faster': $loserBullet", loserBullet.contains("faster"))
+
+        val ratio = Regex("""([\d.]+)x""")
+        val winnerRatio = ratio.find(winnerBullet)!!.groupValues[1]
+        val loserRatio = ratio.find(loserBullet)!!.groupValues[1]
+        assertEquals(
+            "Both sides should quote the same multiplier, just with an opposite verb",
+            winnerRatio,
+            loserRatio,
+        )
     }
 
     @Test

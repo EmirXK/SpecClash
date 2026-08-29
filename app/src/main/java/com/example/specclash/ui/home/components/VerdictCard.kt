@@ -17,11 +17,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.StarHalf
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lightbulb
-import androidx.compose.material.icons.filled.MilitaryTech
 import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
@@ -43,11 +41,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.specclash.domain.SpecComparator.FullComparisonVerdict
 import com.example.specclash.domain.SpecComparator.ValueAnalysis
 import com.example.specclash.domain.SpecComparator.Winner
-import com.example.specclash.domain.SpecComparator.WinnerBadge
 import com.example.specclash.ui.util.ShareUtils
 import kotlinx.coroutines.launch
 
@@ -126,8 +124,6 @@ fun VerdictCard(
                     fontWeight = FontWeight.SemiBold,
                 )
                 Spacer(Modifier.weight(1f))
-                WinnerBadgeChip(verdict.badge, leaderAccent)
-                Spacer(Modifier.width(4.dp))
                 IconButton(
                     onClick = {
                         shareScope.launch {
@@ -462,36 +458,6 @@ private fun PriceDisclaimerFooter() {
 }
 
 @Composable
-private fun WinnerBadgeChip(badge: WinnerBadge, accent: Color) {
-    val (label, icon) = when (badge) {
-        WinnerBadge.DECISIVE_HARDWARE_WINNER -> "Decisive Hardware Winner" to Icons.Filled.EmojiEvents
-        WinnerBadge.MARGINAL_LEAD -> "Marginal Lead" to Icons.AutoMirrored.Filled.StarHalf
-        WinnerBadge.CLOSE_MATCHUP -> "Close Matchup" to Icons.Filled.MilitaryTech
-    }
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .clip(RoundedCornerShape(10.dp))
-            .background(accent.copy(alpha = 0.18f))
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = accent,
-            modifier = Modifier.size(14.dp),
-        )
-        Spacer(Modifier.width(4.dp))
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = accent,
-            fontWeight = FontWeight.SemiBold,
-        )
-    }
-}
-
-@Composable
 private fun ScoreBlock(
     label: String,
     score: Double,
@@ -507,12 +473,13 @@ private fun ScoreBlock(
             .padding(horizontal = 10.dp, vertical = 10.dp),
     ) {
         Text(
-            text = shortName(label),
+            text = label,
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.Medium,
             textAlign = TextAlign.Center,
             maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
         )
         Spacer(Modifier.height(2.dp))
         Text(
@@ -543,11 +510,12 @@ private fun AdvantagesColumn(
             .padding(horizontal = 10.dp, vertical = 10.dp),
     ) {
         Text(
-            text = shortName(title),
+            text = title,
             style = MaterialTheme.typography.labelMedium,
             color = accent,
             fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
         )
         Spacer(Modifier.height(6.dp))
         bullets.take(3).forEach { bullet ->
@@ -572,7 +540,3 @@ private fun AdvantagesColumn(
     }
 }
 
-private fun shortName(name: String): String {
-    val parts = name.split(" ")
-    return if (parts.size >= 2) "${parts[0]} ${parts[1]}" else name
-}
